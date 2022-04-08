@@ -37,3 +37,46 @@ if func_name not in _allowed_funcs:
 else:
     func_to_use = getattr(mymod, func_name)
 ```
+
+## 02. Generate numpy compatible function with sympy
+
+`sympy.lambdify` function allows us to convert `sympy` expression into python callable function. 
+
+```python
+import numpy as np
+import sympy
+from sympy.functions.special.polynomials import hermite
+
+x = sympy.symbols("x")  # define symbol 
+H_3 = hermite(3, x_sym)  # 3th Hermite polynomial
+eval_hermite = sympy.lambdify(x, H_3, "numpy") # args: symbol, expression, backend
+
+# Evaluate polynomial
+x_vals = np.linspace(-1, 1, 100)
+y_vals = eval_hermite(x_vals)
+```
+
+It also can be used with any framework that accepts numpy (ex. `jax`).
+
+```python
+from functools import partial
+
+import jax
+import jax.numpy as jnp
+import numpy as np
+import sympy
+from sympy.functions.special.polynomials import hermite
+
+# Can be jitted
+@partial(jax.jit, static_argnums=(1,))
+def hermite_fn(x, n):
+    x_sym = sympy.symbols("x")
+    H_n = hermite(n, x_sym)
+    eval_hermite = sympy.lambdify(x_sym, H_n, "numpy")
+    return eval_hermite(x)
+    
+x_vals = jnp.linspace(-3, 3.5, 10000)
+y_vals = hermite_fn(xs, 2)
+# jax.grad per x values
+dy_dx_vals = jax.vmap(jax.grad(hermite_fn), (0, None))(xs, 2)
+```
